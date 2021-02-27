@@ -1,45 +1,66 @@
 import re
 from PIL import Image
 from wordcloud import WordCloud
+from collections import namedtuple
+from dataclasses import dataclass
 import json
 import os
 
 commandList = []
 
+TopFields = namedtuple('TopFields', ['pid','user','pr','ni','virt','res','shr', 's', 'cpu','mem','time','command'])
+
+@dataclass
+class Stats:
+    cpu: int = 1
+    memory: int = 1
+
+    def get_value(self) -> float:
+        return (self.cpu ** 2 + self.memory ** 2) ** 0.5
+
+
+class CommandStats(dict):
+    def __missing__(self, key):
+        self[key] = self.factory(key)
+        return self[key]
+
+    def factory(self, key):
+        return Stats(1, 1)
+
+
+commands = CommandStats()
+
+
 with open("top.out", "r") as topFile:
     topOutput = topFile.read().split("\n")[7:]
 
     for line in topOutput[:-1]:
-        line = re.sub(r'\s+', ' ', line).strip()
-        fields = line.split(" ")
+        fields = TopFields(*re.sub(r'\s+', ' ', line).strip().split(' '))
 
         try:
-            if fields[11].count("/") > 0:
-                command = fields[11].split("/")[0]
+            if fields.command.count("/") > 0:
+                command = fields.command.split("/")[0]
             else:
-                command = fields[11]
+                command = fields.command
 
-            cpu = float(fields[8].replace(",", "."))
-            mem = float(fields[9].replace(",", "."))
+            cpu = float(fields.cpu.replace(",", "."))
+            mem = float(fields.mem.replace(",", "."))
 
             if command != "top":
                 commandList.append((command, cpu, mem))
         except:
             pass
 
-commandDict = {}
 
 for command, cpu, mem in commandList:
-    if command in commandDict:
-        commandDict[command][0] += cpu
-        commandDict[command][1] += mem
-    else:
-        commandDict[command] = [cpu + 1, mem + 1]
+  commands[command].cpu += cpu
+  commands[command].memory += mem
 
-resourceDict = {}
 
-for command, [cpu, mem] in commandDict.items():
-    resourceDict[command] = (cpu ** 2 + mem ** 2) ** 0.5
+resourceFrequency = {}
+
+for command, stats in commands.items():
+    resourceFrequency[command] = stats.get_value()
 
 width, height = None, None
 try:
@@ -59,7 +80,7 @@ wc = WordCloud(
     background_color=configJSON["wordcloud"]["background"],
     width=width - 2 * int(configJSON["wordcloud"]["margin"]),
     height=height - 2 * int(configJSON["wordcloud"]["margin"])
-).generate_from_frequencies(resourceDict)
+).generate_from_frequencies(resourceFrequency)
 
 wc.to_file('wc.png')
 
@@ -72,4 +93,5 @@ wallpaper.paste(
         configJSON["wordcloud"]["margin"]
     )
 )
+
 wallpaper.save("wallpaper.png")
