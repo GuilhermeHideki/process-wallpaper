@@ -8,7 +8,24 @@ import os
 
 commandList = []
 
-TopFields = namedtuple('TopFields', ['pid','user','pr','ni','virt','res','shr', 's', 'cpu','mem','time','command'])
+TopFields = namedtuple(
+    "TopFields",
+    [
+        "pid",
+        "user",
+        "pr",
+        "ni",
+        "virt",
+        "res",
+        "shr",
+        "s",
+        "cpu",
+        "mem",
+        "time",
+        "command",
+    ],
+)
+
 
 @dataclass
 class Stats:
@@ -32,11 +49,11 @@ commands = CommandStats()
 
 
 with open("top.out", "r") as topFile:
-    ignored_commands = ['top']
+    ignored_commands = ["top"]
     topOutput = topFile.read().split("\n")[7:]
 
     for line in topOutput[:-1]:
-        fields = TopFields(*re.sub(r'\s+', ' ', line).strip().split(' '))
+        fields = TopFields(*re.sub(r"\s+", " ", line).strip().split(" "))
 
         try:
             if fields.command.count("/") > 0:
@@ -56,8 +73,8 @@ with open("top.out", "r") as topFile:
 
 
 for command, cpu, mem in commandList:
-  commands[command].cpu += cpu
-  commands[command].memory += mem
+    commands[command].cpu += cpu
+    commands[command].memory += mem
 
 
 resourceFrequency = {}
@@ -76,25 +93,21 @@ except:
 configJSON = json.loads(open("config.json", "r").read())
 
 if not width or not height:
-    width = configJSON['resolution']['width']
-    height = configJSON['resolution']['height']
+    width = configJSON["resolution"]["width"]
+    height = configJSON["resolution"]["height"]
 
 wc = WordCloud(
     background_color=configJSON["wordcloud"]["background"],
     width=width - 2 * int(configJSON["wordcloud"]["margin"]),
-    height=height - 2 * int(configJSON["wordcloud"]["margin"])
+    height=height - 2 * int(configJSON["wordcloud"]["margin"]),
 ).generate_from_frequencies(resourceFrequency)
 
-wc.to_file('wc.png')
+wc.to_file("wc.png")
 
 wordcloud = Image.open("wc.png")
-wallpaper = Image.new('RGB', (width, height), configJSON["wordcloud"]["background"])
+wallpaper = Image.new("RGB", (width, height), configJSON["wordcloud"]["background"])
 wallpaper.paste(
-    wordcloud,
-    (
-        configJSON["wordcloud"]["margin"],
-        configJSON["wordcloud"]["margin"]
-    )
+    wordcloud, (configJSON["wordcloud"]["margin"], configJSON["wordcloud"]["margin"])
 )
 
 wallpaper.save("wallpaper.png")
