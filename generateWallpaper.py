@@ -32,6 +32,7 @@ commands = CommandStats()
 
 
 with open("top.out", "r") as topFile:
+    ignored_commands = ['top']
     topOutput = topFile.read().split("\n")[7:]
 
     for line in topOutput[:-1]:
@@ -43,11 +44,13 @@ with open("top.out", "r") as topFile:
             else:
                 command = fields.command
 
+            if command in ignored_commands:
+                continue
+
             cpu = float(fields.cpu.replace(",", "."))
             mem = float(fields.mem.replace(",", "."))
+            commandList.append((command, cpu, mem))
 
-            if command != "top":
-                commandList.append((command, cpu, mem))
         except:
             pass
 
